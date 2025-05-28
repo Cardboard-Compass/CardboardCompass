@@ -1,0 +1,71 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth !== null && $uid === auth.uid",
+        ".write": "auth !== null && $uid === auth.uid",
+        
+        "profile": {
+          ".validate": "newData.hasChildren(['displayName', 'preferences'])",
+          "displayName": { ".validate": "newData.isString() && newData.val().length > 0" },
+          "location": { ".validate": "!newData.exists() || newData.isString()" },
+          "bio": { ".validate": "!newData.exists() || newData.isString()" },
+          "collectorSince": { ".validate": "!newData.exists() || newData.isString()" },
+          "preferences": {
+            ".validate": "newData.hasChildren(['currency', 'notifications', 'privateCollection'])",
+            "currency": { ".validate": "newData.val() === 'USD' || newData.val() === 'AUD'" },
+            "notifications": { ".validate": "newData.isBoolean()" },
+            "privateCollection": { ".validate": "newData.isBoolean()" }
+          }
+        },
+        
+        "collection": {
+          "cards": {
+            "$cardId": {
+              ".read": "auth !== null && ($uid === auth.uid || root.child('users').child($uid).child('profile/preferences/privateCollection').exists() === false || root.child('users').child($uid).child('profile/preferences/privateCollection').val() === false)",
+              ".validate": "newData.hasChildren(['id', 'name', 'set', 'imageUrl', 'category', 'addedAt', 'priceHistory'])",
+              "id": { ".validate": "newData.val() === $cardId" },
+              "name": { ".validate": "newData.isString() && newData.val().length > 0" },
+              "set": { ".validate": "newData.isString() && newData.val().length > 0" },
+              "number": { ".validate": "!newData.exists() || newData.isString()" },
+              "rarity": { ".validate": "!newData.exists() || newData.isString()" },
+              "imageUrl": { ".validate": "newData.isString() && newData.val().matches(/^https?:\\/\\/.*/)" },
+              "category": { ".validate": "newData.val() === 'pokemon' || newData.val() === 'magic' || newData.val() === 'yugioh' || newData.val() === 'flesh & blood'" },
+              "condition": { ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(mint|near_mint|excellent|good|poor)$/))" },
+              "notes": { ".validate": "!newData.exists() || newData.isString()" },
+              "addedAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
+              "priceHistory": {
+                ".validate": "newData.hasChildren(['tcgplayer', 'ebayAU'])",
+                "tcgplayer": {
+                  ".validate": "newData.hasChildren(['market', 'low', 'mid', 'high', 'lastUpdated'])",
+                  "market": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+                  "low": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+                  "mid": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+                  "high": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+                  "lastUpdated": { ".validate": "newData.isNumber() && newData.val() <= now" }
+                },
+                "ebayAU": {
+                  ".validate": "newData.hasChildren(['lastSold', 'lastSoldDate'])",
+                  "lastSold": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+                  "lastSoldDate": { ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)" }
+                }
+              }
+            }
+          },
+          "stats": {
+            ".read": "auth !== null && ($uid === auth.uid || root.child('users').child($uid).child('profile/preferences/privateCollection').exists() === false || root.child('users').child($uid).child('profile/preferences/privateCollection').val() === false)",
+            ".validate": "newData.hasChildren(['totalCards', 'totalValueUSD', 'totalValueAUD', 'lastUpdated'])",
+            "totalCards": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "totalValueUSD": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "totalValueAUD": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "lastUpdated": { ".validate": "newData.isNumber() && newData.val() <= now" }
+          }
+        }
+      }
+    },
+    "marketData": {
+      ".read": "auth !== null",
+      ".write": false
+    }
+  }
+}

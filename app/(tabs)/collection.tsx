@@ -1,173 +1,373 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, useColorScheme } from 'react-native';
-import { SplashScreen } from 'expo-router';
-import { useFonts } from 'expo-font';
-import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { colors } from '@/constants/colors';
-import { FilterMenu } from '@/components/FilterMenu';
-import { CollectionCard } from '@/components/CollectionCard';
-import { SearchBar } from '@/components/SearchBar';
-import { Filter, Grid2x2 as Grid, List } from 'lucide-react-native';
-import { mockCards } from '@/data/mockData';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  SafeAreaView,
+  Platform,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Search, Filter, Plus, ChevronDown } from 'lucide-react-native';
+import CollectionStats from '@/components/collection/CollectionStats';
+import { mockCollection } from '@/utils/mockData';
 
-// Prevent splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
+const SORT_OPTIONS = ['Recently Added', 'Price: High to Low', 'Price: Low to High', 'Alphabetical'];
 
 export default function CollectionScreen() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('All Cards');
-  const [cards, setCards] = useState(mockCards);
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState(SORT_OPTIONS[0]);
+  const [showSortOptions, setShowSortOptions] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
-  const [fontsLoaded, fontError] = useFonts({
-    'Inter-Regular': Inter_400Regular,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
-  });
+  const filteredCards = mockCollection.filter(card => 
+    card.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (activeTab === 'all' || card.category.toLowerCase() === activeTab)
+  );
 
-  // Hide splash screen once fonts are loaded
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+  // Add explicit type checking and default values
+  const totalValueAUD = mockCollection.reduce((sum, card) => {
+    const price = typeof card.priceAUD === 'number' ? card.priceAUD : 0;
+    return sum + price;
+  }, 0);
 
-  // Return null to keep splash screen visible while fonts load
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
+  const totalValueUSD = mockCollection.reduce((sum, card) => {
+    const price = typeof card.tcgplayerMarket === 'number' ? card.tcgplayerMarket : 0;
+    return sum + price;
+  }, 0);
 
-  const toggleViewMode = () => {
-    setViewMode(viewMode === 'grid' ? 'list' : 'grid');
-  };
-
-  const toggleFilterMenu = () => {
-    setFilterVisible(!filterVisible);
-  };
-
-  const applyFilter = (filter: string) => {
-    setActiveFilter(filter);
-    setFilterVisible(false);
-    
-    // In a real app, this would filter the actual data
-    if (filter === 'All Cards') {
-      setCards(mockCards);
-    } else if (filter === 'Pokémon') {
-      setCards(mockCards.filter(card => card.game === 'Pokémon'));
-    } else if (filter === 'Magic: The Gathering') {
-      setCards(mockCards.filter(card => card.game === 'Magic: The Gathering'));
-    } else if (filter === 'Yu-Gi-Oh!') {
-      setCards(mockCards.filter(card => card.game === 'Yu-Gi-Oh!'));
-    }
-  };
-
-  return (
-    <View style={[
-      styles.container, 
-      { backgroundColor: isDark ? colors.gray[900] : colors.gray[100] }
-    ]}>
-      <View style={styles.header}>
-        <Text style={[
-          styles.title,
-          { color: isDark ? colors.white : colors.gray[900] }
-        ]}>
-          My Collection
-        </Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.headerButton} onPress={toggleFilterMenu}>
-            <Filter size={24} color={isDark ? colors.white : colors.gray[900]} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton} onPress={toggleViewMode}>
-            {viewMode === 'grid' ? (
-              <List size={24} color={isDark ? colors.white : colors.gray[900]} />
-            ) : (
-              <Grid size={24} color={isDark ? colors.white : colors.gray[900]} />
-            )}
-          </TouchableOpacity>
+  const renderCard = ({ item }) => (
+    <TouchableOpacity style={styles.card}>
+      <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.cardSet} numberOfLines={1}>{item.set}</Text>
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceLabel}>Value:</Text>
+          <Text style={styles.priceValue}>
+            ${(typeof item.priceAUD === 'number' ? item.priceAUD : 0).toFixed(2)} AUD
+          </Text>
         </View>
       </View>
+    </TouchableOpacity>
+  );
 
-      <SearchBar placeholder="Search your collection..." />
-      
-      <View style={styles.filterChip}>
-        <Text style={styles.filterChipText}>
-          {activeFilter}
-        </Text>
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      <View style={styles.header}>
+        <Text style={styles.title}>My Collection</Text>
+        <TouchableOpacity style={styles.addButton}>
+          <Plus size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+
+      <CollectionStats 
+        totalCards={mockCollection.length} 
+        totalValueAUD={totalValueAUD}
+        totalValueUSD={totalValueUSD}
+        uniqueSets={new Set(mockCollection.map(card => card.set)).size}
+      />
+
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBox}>
+          <Search size={20} color="#8E8E93" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search your collection..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <TouchableOpacity style={styles.filterButton}>
+          <Filter size={20} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.tabsContainer}>
+        <ScrollableTabs
+          tabs={['all', 'pokemon', 'magic', 'yugioh', 'flesh & blood']}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+      </View>
+
+      <View style={styles.sortContainer}>
+        <Text style={styles.sortLabel}>Sort by:</Text>
+        <TouchableOpacity 
+          style={styles.sortSelector}
+          onPress={() => setShowSortOptions(!showSortOptions)}
+        >
+          <Text style={styles.sortText}>{sortBy}</Text>
+          <ChevronDown size={16} color="#007AFF" />
+        </TouchableOpacity>
+
+        {showSortOptions && (
+          <View style={styles.sortOptionsContainer}>
+            {SORT_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.sortOption}
+                onPress={() => {
+                  setSortBy(option);
+                  setShowSortOptions(false);
+                }}
+              >
+                <Text style={[
+                  styles.sortOptionText,
+                  sortBy === option && styles.activeSortOption
+                ]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       <FlatList
-        data={cards}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        numColumns={viewMode === 'grid' ? 2 : 1}
-        key={viewMode} // Force re-render when layout changes
-        renderItem={({ item }) => (
-          <CollectionCard 
-            card={item} 
-            viewMode={viewMode} 
-            isDark={isDark}
-          />
-        )}
-        contentContainerStyle={styles.listContent}
+        data={filteredCards}
+        renderItem={renderCard}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.cardList}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No cards found</Text>
+            <Text style={styles.emptySubtext}>Try adjusting your filters or add new cards</Text>
+          </View>
+        }
       />
+    </SafeAreaView>
+  );
+}
 
-      {filterVisible && (
-        <FilterMenu 
-          onClose={toggleFilterMenu}
-          onSelectFilter={applyFilter}
-          activeFilter={activeFilter}
-          isDark={isDark}
-        />
+function ScrollableTabs({ tabs, activeTab, onTabChange }) {
+  return (
+    <FlatList
+      horizontal
+      data={tabs}
+      keyExtractor={(item) => item}
+      showsHorizontalScrollIndicator={false}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === item && styles.activeTab
+          ]}
+          onPress={() => onTabChange(item)}
+        >
+          <Text style={[
+            styles.tabText,
+            activeTab === item && styles.activeTabText
+          ]}>
+            {item.charAt(0).toUpperCase() + item.slice(1)}
+          </Text>
+        </TouchableOpacity>
       )}
-    </View>
+      contentContainerStyle={styles.tabsContent}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: '#F2F2F7',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingTop: Platform.OS === 'android' ? 16 : 8,
+    paddingBottom: 16,
   },
   title: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: 'bold',
   },
-  headerButtons: {
+  addButton: {
+    backgroundColor: '#007AFF',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchContainer: {
     flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    alignItems: 'center',
   },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
-  filterChip: {
-    backgroundColor: colors.primary[600],
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-    marginLeft: 16,
-    marginTop: 16,
+  tabsContainer: {
     marginBottom: 16,
   },
-  filterChipText: {
-    fontFamily: 'Inter-SemiBold',
-    color: colors.white,
+  tabsContent: {
+    paddingHorizontal: 12,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderRadius: 20,
+    backgroundColor: 'white',
+  },
+  activeTab: {
+    backgroundColor: '#007AFF',
+  },
+  tabText: {
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: 'white',
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    position: 'relative',
+  },
+  sortLabel: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginRight: 8,
+  },
+  sortSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sortText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#007AFF',
+    marginRight: 4,
+  },
+  sortOptionsContainer: {
+    position: 'absolute',
+    top: 30,
+    right: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
+  },
+  sortOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  sortOptionText: {
     fontSize: 14,
   },
-  listContent: {
+  activeSortOption: {
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  cardList: {
     padding: 8,
+  },
+  row: {
+    justifyContent: 'space-between',
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '48%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: '100%',
+    height: 180,
+    resizeMode: 'contain',
+    backgroundColor: '#F8F8F8',
+  },
+  cardInfo: {
+    padding: 12,
+  },
+  cardName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  cardSet: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginBottom: 8,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  priceLabel: {
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  priceValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
   },
 });

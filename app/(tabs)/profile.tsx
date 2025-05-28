@@ -1,392 +1,269 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, useColorScheme } from 'react-native';
-import { SplashScreen } from 'expo-router';
-import { useFonts } from 'expo-font';
-import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { colors } from '@/constants/colors';
-import { User, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, ChevronRight, Moon } from 'lucide-react-native';
-
-// Prevent splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  Switch,
+  SafeAreaView,
+  Platform,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Settings, Bell, CreditCard, CircleHelp as HelpCircle, ChevronRight, Shield, LogOut, Share2, AlertTriangle } from 'lucide-react-native';
+import { captureError } from '@/utils/errorTracking';
 
 export default function ProfileScreen() {
-  const systemColorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(systemColorScheme === 'dark');
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [priceAlertsEnabled, setPriceAlertsEnabled] = useState(true);
+  const userStats = [
+    { label: 'Collection Value', value: '$12,450.87' },
+    { label: 'Cards', value: '342' },
+    { label: 'Sets', value: '24' },
+  ];
 
-  const [fontsLoaded, fontError] = useFonts({
-    'Inter-Regular': Inter_400Regular,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
-  });
-
-  // Hide splash screen once fonts are loaded
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+  const menuSections = [
+    {
+      title: 'Account',
+      items: [
+        { icon: <Settings size={22} color="#8E8E93" />, label: 'Account Settings', showChevron: true },
+        { icon: <Bell size={22} color="#8E8E93" />, label: 'Notifications', showToggle: true },
+        { icon: <CreditCard size={22} color="#8E8E93" />, label: 'Payment Methods', showChevron: true },
+      ]
+    },
+    {
+      title: 'Preferences',
+      items: [
+        { icon: <Shield size={22} color="#8E8E93" />, label: 'Privacy Settings', showChevron: true },
+        { icon: <Share2 size={22} color="#8E8E93" />, label: 'Share Profile', showChevron: true },
+      ]
+    },
+    {
+      title: 'Support',
+      items: [
+        { icon: <HelpCircle size={22} color="#8E8E93" />, label: 'Help & Support', showChevron: true },
+        { 
+          icon: <AlertTriangle size={22} color="#FF9500" />, 
+          label: 'Test Error Tracking', 
+          onPress: () => {
+            try {
+              throw new Error('Test error from Profile screen');
+            } catch (error) {
+              captureError(error as Error, {
+                screen: 'Profile',
+                action: 'Test Error Button',
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+        },
+      ]
+    },
+    {
+      title: null,
+      items: [
+        { icon: <LogOut size={22} color="#FF3B30" />, label: 'Sign Out', textColor: '#FF3B30' },
+      ]
     }
-  }, [fontsLoaded, fontError]);
+  ];
 
-  // Return null to keep splash screen visible while fonts load
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
-  const toggleDarkMode = () => {
-    setIsDark(!isDark);
-    // In a real app, this would update the app's theme
-  };
-
-  const toggleNotifications = () => {
-    setNotificationsEnabled(!notificationsEnabled);
-  };
-
-  const togglePriceAlerts = () => {
-    setPriceAlertsEnabled(!priceAlertsEnabled);
-  };
+  const renderMenuItem = (item, index, section) => (
+    <TouchableOpacity 
+      key={`${section.title}-${index}`}
+      style={[
+        styles.menuItem,
+        index === section.items.length - 1 && styles.lastMenuItem
+      ]}
+      onPress={item.onPress}
+    >
+      <View style={styles.menuItemLeft}>
+        {item.icon}
+        <Text style={[styles.menuItemLabel, item.textColor && { color: item.textColor }]}>
+          {item.label}
+        </Text>
+      </View>
+      <View style={styles.menuItemRight}>
+        {item.showToggle && <Switch value={true} />}
+        {item.showChevron && <ChevronRight size={20} color="#C7C7CC" />}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView 
-      style={[
-        styles.container,
-        { backgroundColor: isDark ? colors.gray[900] : colors.gray[100] }
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <Text style={[
-          styles.title,
-          { color: isDark ? colors.white : colors.gray[900] }
-        ]}>
-          Profile
-        </Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      <ScrollView>
+        <View style={styles.header}>
+          <Text style={styles.title}>Profile</Text>
+        </View>
 
-      <View style={styles.profileSection}>
-        <View style={[
-          styles.avatarContainer,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <User size={32} color={isDark ? colors.white : colors.gray[900]} />
-        </View>
-        <View style={styles.profileInfo}>
-          <Text style={[
-            styles.profileName,
-            { color: isDark ? colors.white : colors.gray[900] }
-          ]}>
-            Johnny Collectibles
-          </Text>
-          <Text style={[
-            styles.profileEmail,
-            { color: isDark ? colors.gray[400] : colors.gray[600] }
-          ]}>
-            johnny@example.com
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={[
-          styles.statCard,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <Text style={[
-            styles.statValue,
-            { color: isDark ? colors.white : colors.gray[900] }
-          ]}>
-            487
-          </Text>
-          <Text style={[
-            styles.statLabel,
-            { color: isDark ? colors.gray[400] : colors.gray[600] }
-          ]}>
-            Cards
-          </Text>
-        </View>
-        <View style={[
-          styles.statCard,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <Text style={[
-            styles.statValue,
-            { color: isDark ? colors.white : colors.gray[900] }
-          ]}>
-            $12,457
-          </Text>
-          <Text style={[
-            styles.statLabel,
-            { color: isDark ? colors.gray[400] : colors.gray[600] }
-          ]}>
-            Value
-          </Text>
-        </View>
-        <View style={[
-          styles.statCard,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <Text style={[
-            styles.statValue,
-            { color: isDark ? colors.white : colors.gray[900] }
-          ]}>
-            23
-          </Text>
-          <Text style={[
-            styles.statLabel,
-            { color: isDark ? colors.gray[400] : colors.gray[600] }
-          ]}>
-            Lists
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[
-          styles.sectionTitle,
-          { color: isDark ? colors.white : colors.gray[900] }
-        ]}>
-          App Settings
-        </Text>
-        
-        <View style={[
-          styles.settingItem,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <View style={styles.settingLeft}>
-            <Moon size={20} color={isDark ? colors.white : colors.gray[900]} />
-            <Text style={[
-              styles.settingText,
-              { color: isDark ? colors.white : colors.gray[900] }
-            ]}>
-              Dark Mode
-            </Text>
-          </View>
-          <Switch
-            value={isDark}
-            onValueChange={toggleDarkMode}
-            trackColor={{ false: colors.gray[300], true: colors.primary[400] }}
-            thumbColor={colors.white}
+        <View style={styles.profileSection}>
+          <Image 
+            source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
+            style={styles.profileImage}
           />
-        </View>
-        
-        <View style={[
-          styles.settingItem,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <View style={styles.settingLeft}>
-            <Bell size={20} color={isDark ? colors.white : colors.gray[900]} />
-            <Text style={[
-              styles.settingText,
-              { color: isDark ? colors.white : colors.gray[900] }
-            ]}>
-              Notifications
-            </Text>
-          </View>
-          <Switch
-            value={notificationsEnabled}
-            onValueChange={toggleNotifications}
-            trackColor={{ false: colors.gray[300], true: colors.primary[400] }}
-            thumbColor={colors.white}
-          />
-        </View>
-        
-        <View style={[
-          styles.settingItem,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <View style={styles.settingLeft}>
-            <CreditCard size={20} color={isDark ? colors.white : colors.gray[900]} />
-            <Text style={[
-              styles.settingText,
-              { color: isDark ? colors.white : colors.gray[900] }
-            ]}>
-              Price Alerts
-            </Text>
-          </View>
-          <Switch
-            value={priceAlertsEnabled}
-            onValueChange={togglePriceAlerts}
-            trackColor={{ false: colors.gray[300], true: colors.primary[400] }}
-            thumbColor={colors.white}
-          />
-        </View>
-      </View>
+          <Text style={styles.profileName}>Alex Johnson</Text>
+          <Text style={styles.profileLocation}>Sydney, Australia</Text>
+          <Text style={styles.profileBio}>Collector since 2015 • Pokemon & Magic</Text>
 
-      <View style={styles.section}>
-        <Text style={[
-          styles.sectionTitle,
-          { color: isDark ? colors.white : colors.gray[900] }
-        ]}>
-          Support
-        </Text>
-        
-        <TouchableOpacity style={[
-          styles.menuItem,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <View style={styles.menuLeft}>
-            <HelpCircle size={20} color={isDark ? colors.white : colors.gray[900]} />
-            <Text style={[
-              styles.menuText,
-              { color: isDark ? colors.white : colors.gray[900] }
-            ]}>
-              Help & Support
-            </Text>
+          <View style={styles.statsContainer}>
+            {userStats.map((stat, index) => (
+              <View key={index} style={styles.statItem}>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+              </View>
+            ))}
           </View>
-          <ChevronRight size={20} color={isDark ? colors.gray[500] : colors.gray[400]} />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={[
-          styles.menuItem,
-          { backgroundColor: isDark ? colors.gray[800] : colors.white }
-        ]}>
-          <View style={styles.menuLeft}>
-            <LogOut size={20} color={colors.error[500]} />
-            <Text style={[
-              styles.menuText,
-              { color: colors.error[500] }
-            ]}>
-              Log Out
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </View>
 
-      <Text style={[
-        styles.versionText,
-        { color: isDark ? colors.gray[600] : colors.gray[500] }
-      ]}>
-        Version 1.0.0
-      </Text>
-    </ScrollView>
+          <TouchableOpacity style={styles.editProfileButton}>
+            <Text style={styles.editProfileText}>Edit Profile</Text>
+          </TouchableOpacity>
+        </View>
+
+        {menuSections.map((section, sectionIndex) => (
+          <View key={sectionIndex} style={styles.menuSection}>
+            {section.title ? (
+              <Text style={styles.menuSectionTitle}>{section.title}</Text>
+            ) : null}
+            <View style={styles.menuItems}>
+              {section.items.map((item, index) => renderMenuItem(item, index, section))}
+            </View>
+          </View>
+        ))}
+
+        <View style={styles.versionInfo}>
+          <Text style={styles.versionText}>CardVault v1.0.0</Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: '#F2F2F7',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 24,
+    paddingTop: Platform.OS === 'android' ? 16 : 8,
+    paddingBottom: 8,
   },
   title: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: 'bold',
   },
   profileSection: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 24,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    margin: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileInfo: {
-    marginLeft: 16,
-    flex: 1,
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 16,
   },
   profileName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
+    fontSize: 24,
+    fontWeight: 'bold',
     marginBottom: 4,
   },
-  profileEmail: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
+  profileLocation: {
+    fontSize: 16,
+    color: '#8E8E93',
+    marginBottom: 8,
   },
-  editButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: colors.primary[600],
-  },
-  editButtonText: {
-    fontFamily: 'Inter-SemiBold',
+  profileBio: {
     fontSize: 14,
-    color: colors.white,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    justifyContent: 'space-around',
+    width: '100%',
     marginBottom: 24,
   },
-  statCard: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 16,
+  statItem: {
     alignItems: 'center',
-    marginHorizontal: 4,
   },
   statValue: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 20,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
     marginBottom: 4,
   },
   statLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
+    fontSize: 12,
+    color: '#8E8E93',
   },
-  section: {
+  editProfileButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  editProfileText: {
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  menuSection: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    marginBottom: 12,
-    paddingHorizontal: 16,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    marginHorizontal: 16,
-    borderRadius: 12,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingText: {
-    fontFamily: 'Inter-Regular',
+  menuSectionTitle: {
     fontSize: 16,
-    marginLeft: 12,
+    fontWeight: '600',
+    marginLeft: 16,
+    marginBottom: 8,
+  },
+  menuItems: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    marginBottom: 8,
-    marginHorizontal: 16,
-    borderRadius: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E5EA',
   },
-  menuLeft: {
+  lastMenuItem: {
+    borderBottomWidth: 0,
+  },
+  menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  menuText: {
-    fontFamily: 'Inter-Regular',
+  menuItemLabel: {
     fontSize: 16,
-    marginLeft: 12,
+    marginLeft: 16,
+  },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  versionInfo: {
+    alignItems: 'center',
+    marginVertical: 24,
   },
   versionText: {
-    fontFamily: 'Inter-Regular',
+    color: '#8E8E93',
     fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 32,
   },
 });

@@ -1,34 +1,37 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
-import { Compass, Scan, FolderHeart, ChartBar as BarChart3, User } from 'lucide-react-native';
-import { colors } from '@/constants/colors';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Scan, Section as Collection, ChartLine as LineChart, Store, User } from 'lucide-react-native';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import Colors from '@/constants/Colors';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  
+  const colors = Colors[colorScheme];
+  const insets = useSafeAreaInsets();
+
+  const commonTabBarStyle = {
+    backgroundColor: colors.tabBar,
+    borderTopColor: colors.tabBarBorder,
+    borderTopWidth: 0.5,
+    height: Platform.OS === 'ios' ? 49 + insets.bottom : 56,
+    paddingBottom: insets.bottom,
+    paddingTop: 8,
+  };
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary[600],
-        tabBarInactiveTintColor: isDark ? colors.gray[400] : colors.gray[500],
-        tabBarStyle: {
-          backgroundColor: isDark ? colors.gray[900] : colors.white,
-          borderTopColor: isDark ? colors.gray[800] : colors.gray[200],
-        },
+        tabBarStyle: commonTabBarStyle,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarLabelStyle: {
-          fontWeight: '500',
           fontSize: 12,
+          fontWeight: '500',
+          paddingBottom: 4,
         },
+        headerShown: false,
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Compass size={size} color={color} />,
-        }}
-      />
       <Tabs.Screen
         name="scan"
         options={{
@@ -40,14 +43,21 @@ export default function TabLayout() {
         name="collection"
         options={{
           title: 'Collection',
-          tabBarIcon: ({ color, size }) => <FolderHeart size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Collection size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="market"
         options={{
           title: 'Market',
-          tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <LineChart size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="sell"
+        options={{
+          title: 'Sell',
+          tabBarIcon: ({ color, size }) => <Store size={size} color={color} />,
         }}
       />
       <Tabs.Screen

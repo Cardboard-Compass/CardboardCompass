@@ -1,292 +1,143 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, useColorScheme } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  SafeAreaView,
+  Platform,
+  Alert,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { SplashScreen } from 'expo-router';
-import { useFonts } from 'expo-font';
-import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { Camera as FlipCamera, Search, X } from 'lucide-react-native';
-import { colors } from '@/constants/colors';
-import { CardScanInfo } from '@/components/CardScanInfo';
-import { SearchBar } from '@/components/SearchBar';
-import { Platform } from 'react-native';
-
-// Prevent splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
+import { Rotate3d as Rotate, ImagePlus, X, Camera as CameraIcon } from 'lucide-react-native';
+import { mockScanCard } from '@/utils/cardScanner';
+import ScanResultModal from '@/components/scan/ScanResultModal';
 
 export default function ScanScreen() {
-  const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
-  const [scannedCard, setScannedCard] = useState<any | null>(null);
-  const [scanMode, setScanMode] = useState<'camera' | 'search'>('camera');
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const [facing, setFacing] = useState<CameraType>('back');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const cameraRef = useRef(null);
 
-  const [fontsLoaded, fontError] = useFonts({
-    'Inter-Regular': Inter_400Regular,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
-  });
-
-  // Hide splash screen once fonts are loaded
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+    if (scanResult) {
+      setShowModal(true);
     }
-  }, [fontsLoaded, fontError]);
-
-  // Return null to keep splash screen visible while fonts load
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
-  function toggleCameraFacing() {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
-
-  // Mock scan function - in a real app, this would process camera input
-  function handleScan() {
-    // Simulate finding a card
-    setScannedCard({
-      name: "Charizard",
-      set: "Base Set",
-      number: "4/102",
-      image: "https://images.pexels.com/photos/6869051/pexels-photo-6869051.jpeg",
-      price: 349.99,
-      marketTrend: "+12.5%",
-      rarity: "Holo Rare"
-    });
-  }
-
-  // Reset scan state
-  function clearScan() {
-    setScannedCard(null);
-  }
+  }, [scanResult]);
 
   if (!permission) {
     // Camera permissions are still loading
     return (
-      <View style={[
-        styles.container,
-        { backgroundColor: isDark ? colors.gray[900] : colors.gray[100] }
-      ]}>
-        <Text style={{ color: isDark ? colors.white : colors.gray[900] }}>Loading camera permissions...</Text>
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
 
   if (!permission.granted) {
-    // Camera permissions not granted
+    // Camera permissions are not granted yet
     return (
-      <View style={[
-        styles.container,
-        { backgroundColor: isDark ? colors.gray[900] : colors.gray[100] }
-      ]}>
-        <Text style={[
-          styles.permissionText,
-          { color: isDark ? colors.white : colors.gray[900] }
-        ]}>
-          We need camera access to scan your cards
-        </Text>
-        <TouchableOpacity 
-          style={styles.permissionButton}
-          onPress={requestPermission}
-        >
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" />
+        <View style={styles.permissionContainer}>
+          <Image
+            source={{ uri: 'https://images.pexels.com/photos/6507483/pexels-photo-6507483.jpeg' }}
+            style={styles.permissionImage}
+          />
+          <Text style={styles.permissionTitle}>Camera Access Required</Text>
+          <Text style={styles.permissionText}>
+            We need camera access to scan your cards. This helps identify and value your collection accurately.
+          </Text>
+          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+            <Text style={styles.permissionButtonText}>Grant Camera Access</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
-  // For web platform, show a simplified version since camera might not work well
-  if (Platform.OS === 'web') {
-    return (
-      <View style={[
-        styles.container,
-        { backgroundColor: isDark ? colors.gray[900] : colors.gray[100] }
-      ]}>
-        <View style={styles.webScanContainer}>
-          <Text style={[
-            styles.webTitle,
-            { color: isDark ? colors.white : colors.gray[900] }
-          ]}>
-            Card Search
-          </Text>
-          
-          <SearchBar placeholder="Search by card name..." />
-          
-          <View style={styles.webNote}>
-            <Text style={[
-              styles.webNoteText,
-              { color: isDark ? colors.gray[400] : colors.gray[600] }
-            ]}>
-              Note: Card scanning works best on native mobile apps. 
-              Please use the search function on web or install the mobile app for full scanning capabilities.
-            </Text>
-          </View>
-          
-          {/* Mock search results */}
-          <View style={styles.searchResultContainer}>
-            <Text style={[
-              styles.searchResultTitle,
-              { color: isDark ? colors.white : colors.gray[900] }
-            ]}>
-              Popular Cards
-            </Text>
-            
-            <TouchableOpacity 
-              style={[
-                styles.searchResult,
-                { backgroundColor: isDark ? colors.gray[800] : colors.white }
-              ]}
-              onPress={() => handleScan()}
-            >
-              <Image 
-                source={{ uri: "https://images.pexels.com/photos/6869051/pexels-photo-6869051.jpeg" }} 
-                style={styles.searchResultImage} 
-              />
-              <View style={styles.searchResultInfo}>
-                <Text style={[
-                  styles.searchResultName,
-                  { color: isDark ? colors.white : colors.gray[900] }
-                ]}>
-                  Charizard
-                </Text>
-                <Text style={[
-                  styles.searchResultSet,
-                  { color: isDark ? colors.gray[400] : colors.gray[600] }
-                ]}>
-                  Base Set · 4/102
-                </Text>
-              </View>
-              <Text style={styles.searchResultPrice}>
-                $349.99
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        
-        {scannedCard && (
-          <CardScanInfo 
-            card={scannedCard} 
-            onClose={clearScan}
-            isDark={isDark}
-          />
-        )}
-      </View>
-    );
-  }
+  const toggleCameraFacing = () => {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
+  };
+
+  const handleScan = async () => {
+    if (isScanning) return;
+    
+    setIsScanning(true);
+    try {
+      // In a real app, this would process the camera frame
+      // For now, we'll use a mock function
+      const result = await mockScanCard();
+      setScanResult(result);
+    } catch (error) {
+      Alert.alert('Scan Error', 'Unable to identify card. Please try again.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setScanResult(null);
+  };
+
+  const handleSelectFromGallery = () => {
+    // This would open the image picker in a real implementation
+    Alert.alert('Coming Soon', 'Gallery selection will be available in the next update.');
+  };
 
   return (
     <View style={styles.container}>
-      {scanMode === 'camera' && !scannedCard && (
-        <>
-          <CameraView style={styles.camera} facing={facing}>
-            <View style={styles.scanOverlay}>
-              <View style={styles.scanCorners}>
-                <View style={[styles.corner, styles.topLeft]} />
-                <View style={[styles.corner, styles.topRight]} />
-                <View style={[styles.corner, styles.bottomLeft]} />
-                <View style={[styles.corner, styles.bottomRight]} />
-              </View>
-              
-              <Text style={styles.scanInstructions}>
-                Center the card in the frame
-              </Text>
-            </View>
-            
-            <View style={styles.cameraControls}>
-              <TouchableOpacity 
-                style={styles.modeButton}
-                onPress={() => setScanMode('search')}
-              >
-                <Search size={24} color={colors.white} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.scanButton}
-                onPress={handleScan}
-              >
-                <View style={styles.scanButtonInner} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modeButton}
-                onPress={toggleCameraFacing}
-              >
-                <FlipCamera size={24} color={colors.white} />
-              </TouchableOpacity>
-            </View>
-          </CameraView>
-        </>
-      )}
-      
-      {scanMode === 'search' && !scannedCard && (
-        <View style={[
-          styles.searchContainer,
-          { backgroundColor: isDark ? colors.gray[900] : colors.gray[100] }
-        ]}>
-          <View style={styles.searchHeader}>
-            <Text style={[
-              styles.searchTitle,
-              { color: isDark ? colors.white : colors.gray[900] }
-            ]}>
-              Manual Search
-            </Text>
-            <TouchableOpacity onPress={() => setScanMode('camera')}>
-              <X size={24} color={isDark ? colors.white : colors.gray[900]} />
+      <StatusBar style="light" />
+      <CameraView
+        ref={cameraRef}
+        style={styles.camera}
+        facing={facing}
+        onBarcodeScanned={handleScan}>
+        <SafeAreaView style={styles.overlay}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.iconButton} onPress={toggleCameraFacing}>
+              <Rotate size={24} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={handleSelectFromGallery}>
+              <ImagePlus size={24} color="white" />
             </TouchableOpacity>
           </View>
-          
-          <SearchBar placeholder="Search by card name..." />
-          
-          {/* Mock search results */}
-          <View style={styles.searchResultContainer}>
-            <Text style={[
-              styles.searchResultTitle,
-              { color: isDark ? colors.white : colors.gray[900] }
-            ]}>
-              Popular Cards
+
+          <View style={styles.scanAreaContainer}>
+            <View style={styles.scanArea}>
+              <View style={styles.cornerTL} />
+              <View style={styles.cornerTR} />
+              <View style={styles.cornerBL} />
+              <View style={styles.cornerBR} />
+            </View>
+            <Text style={styles.scanText}>
+              Position card within frame
             </Text>
-            
-            <TouchableOpacity 
-              style={[
-                styles.searchResult,
-                { backgroundColor: isDark ? colors.gray[800] : colors.white }
-              ]}
-              onPress={() => handleScan()}
-            >
-              <Image 
-                source={{ uri: "https://images.pexels.com/photos/6869051/pexels-photo-6869051.jpeg" }} 
-                style={styles.searchResultImage} 
-              />
-              <View style={styles.searchResultInfo}>
-                <Text style={[
-                  styles.searchResultName,
-                  { color: isDark ? colors.white : colors.gray[900] }
-                ]}>
-                  Charizard
-                </Text>
-                <Text style={[
-                  styles.searchResultSet,
-                  { color: isDark ? colors.gray[400] : colors.gray[600] }
-                ]}>
-                  Base Set · 4/102
-                </Text>
-              </View>
-              <Text style={styles.searchResultPrice}>
-                $349.99
-              </Text>
+          </View>
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.scanButton}
+              onPress={handleScan}
+              disabled={isScanning}>
+              {isScanning ? (
+                <ActivityIndicator color="white\" size="small" />
+              ) : (
+                <CameraIcon size={24} color="white" />
+              )}
             </TouchableOpacity>
           </View>
-        </View>
-      )}
-      
-      {scannedCard && (
-        <CardScanInfo 
-          card={scannedCard} 
-          onClose={clearScan}
-          isDark={isDark}
-        />
+        </SafeAreaView>
+      </CameraView>
+
+      {showModal && scanResult && (
+        <ScanResultModal visible={showModal} card={scanResult} onClose={closeModal} />
       )}
     </View>
   );
@@ -295,178 +146,133 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000',
   },
   camera: {
     flex: 1,
   },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'space-between',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingTop: Platform.OS === 'android' ? 40 : 10,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanAreaContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanArea: {
+    width: 280,
+    height: 400,
+    borderWidth: 0,
+    position: 'relative',
+  },
+  scanText: {
+    color: 'white',
+    fontSize: 16,
+    marginTop: 20,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+  },
+  scanButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cornerTL: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderColor: 'white',
+  },
+  cornerTR: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderColor: 'white',
+  },
+  cornerBL: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderColor: 'white',
+  },
+  cornerBR: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderColor: 'white',
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'white',
+  },
+  permissionImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    marginBottom: 20,
+  },
+  permissionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   permissionText: {
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 30,
+    color: '#666',
   },
   permissionButton: {
-    backgroundColor: colors.primary[600],
+    backgroundColor: '#007AFF',
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 30,
     borderRadius: 8,
   },
   permissionButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    color: colors.white,
+    color: 'white',
     fontSize: 16,
-  },
-  scanOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scanCorners: {
-    width: 280,
-    height: 390,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    borderColor: colors.white,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-  },
-  scanInstructions: {
-    fontFamily: 'Inter-SemiBold',
-    color: colors.white,
-    fontSize: 16,
-    marginTop: 24,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  cameraControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modeButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scanButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scanButtonInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.white,
-  },
-  searchContainer: {
-    flex: 1,
-    padding: 16,
-    paddingTop: 60,
-  },
-  searchHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  searchTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
-  },
-  searchResultContainer: {
-    marginTop: 24,
-  },
-  searchResultTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    marginBottom: 12,
-  },
-  searchResult: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  searchResultImage: {
-    width: 48,
-    height: 70,
-    borderRadius: 4,
-  },
-  searchResultInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  searchResultName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-  },
-  searchResultSet: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-  },
-  searchResultPrice: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: colors.primary[600],
-  },
-  webScanContainer: {
-    flex: 1,
-    padding: 16,
-    paddingTop: 60,
-  },
-  webTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
-    marginBottom: 16,
-  },
-  webNote: {
-    padding: 12,
-    backgroundColor: 'rgba(255, 193, 7, 0.1)',
-    borderRadius: 8,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  webNoteText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
+    fontWeight: '600',
   },
 });

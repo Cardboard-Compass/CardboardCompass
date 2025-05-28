@@ -1,0 +1,94 @@
+// Timestamp validation helper
+function isValidTimestamp(timestamp) {
+  return timestamp is number && timestamp <= now && timestamp >= 0;
+}
+
+// Card data validation helper
+function isValidCardData(card) {
+  return card.keys().hasAll(['id', 'name', 'set', 'imageUrl', 'category', 'addedAt', 'priceHistory']) &&
+    card.name is string && card.name.size() > 0 &&
+    card.set is string && card.set.size() > 0 &&
+    card.imageUrl is string && card.imageUrl.matches('^https?://.*') &&
+    card.category in ['pokemon', 'magic', 'yugioh', 'flesh & blood'] &&
+    isValidTimestamp(card.addedAt) &&
+    isValidPriceHistory(card.priceHistory);
+}
+
+// Price history validation helper
+function isValidPriceHistory(history) {
+  return history.keys().hasAll(['tcgplayer', 'ebayAU']) &&
+    isValidTCGPlayerPrices(history.tcgplayer) &&
+    isValidEbayPrices(history.ebayAU);
+}
+
+function isValidTCGPlayerPrices(prices) {
+  return prices.keys().hasAll(['market', 'low', 'mid', 'high', 'lastUpdated']) &&
+    prices.market is number && prices.market >= 0 &&
+    prices.low is number && prices.low >= 0 &&
+    prices.mid is number && prices.mid >= 0 &&
+    prices.high is number && prices.high >= 0 &&
+    isValidTimestamp(prices.lastUpdated);
+}
+
+function isValidEbayPrices(prices) {
+  return prices.keys().hasAll(['lastSold', 'lastSoldDate']) &&
+    prices.lastSold is number && prices.lastSold >= 0 &&
+    prices.lastSoldDate is string && prices.lastSoldDate.matches('^\\d{4}-\\d{2}-\\d{2}$');
+}
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User profile rules
+    match /users/{userId}/profile {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && 
+                   request.auth.uid == userId &&
+                   request.resource.data.keys().hasAll(['displayName', 'preferences']) &&
+                   request.resource.data.displayName is string &&
+                   request.resource.data.preferences.keys().hasAll(['currency', 'notifications', 'privateCollection']) &&
+                   request.resource.data.preferences.currency in ['USD', 'AUD'] &&
+                   request.resource.data.preferences.notifications is bool &&
+                   request.resource.data.preferences.privateCollection is bool;
+    }
+
+    // Collection rules
+    match /users/{userId}/collection/cards/{cardId} {
+      allow read: if request.auth != null && (
+                   request.auth.uid == userId || 
+                   !get(/databases/$(database)/documents/users/$(userId)/profile).data.preferences.privateCollection
+                 );
+      allow create: if request.auth != null &&
+                    request.auth.uid == userId &&
+                    isValidCardData(request.resource.data);
+      allow update: if request.auth != null &&
+                    request.auth.uid == userId &&
+                    isValidCardData(request.resource.data);
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Collection stats rules
+    match /users/{userId}/collection/stats {
+      allow read: if request.auth != null && (
+                   request.auth.uid == userId ||
+                   !get(/databases/$(database)/documents/users/$(userId)/profile).data.preferences.privateCollection
+                 );
+      allow write: if request.auth != null &&
+                   request.auth.uid == userId &&
+                   request.resource.data.keys().hasAll(['totalCards', 'totalValueUSD', 'totalValueAUD', 'lastUpdated']) &&
+                   request.resource.data.totalCards is number &&
+                   request.resource.data.totalCards >= 0 &&
+                   request.resource.data.totalValueUSD is number &&
+                   request.resource.data.totalValueUSD >= 0 &&
+                   request.resource.data.totalValueAUD is number &&
+                   request.resource.data.totalValueAUD >= 0 &&
+                   isValidTimestamp(request.resource.data.lastUpdated);
+    }
+
+    // Market data rules (read-only for users)
+    match /marketData/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only allow writes through admin SDK
+    }
+  }
+}
