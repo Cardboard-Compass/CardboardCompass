@@ -11,8 +11,14 @@ import {
   Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Settings, Bell, CreditCard, CircleHelp as HelpCircle, ChevronRight, Shield, LogOut, Share2, AlertTriangle } from 'lucide-react-native';
+import * as LucideWeb from 'lucide-react';
+import * as LucideNative from 'lucide-react-native';
 import { captureError } from '@/utils/errorTracking';
+
+const Icons = Platform.select({
+  web: LucideWeb,
+  default: LucideNative,
+});
 
 export default function ProfileScreen() {
   const userStats = [
@@ -25,24 +31,24 @@ export default function ProfileScreen() {
     {
       title: 'Account',
       items: [
-        { icon: <Settings size={22} color="#8E8E93" />, label: 'Account Settings', showChevron: true },
-        { icon: <Bell size={22} color="#8E8E93" />, label: 'Notifications', showToggle: true },
-        { icon: <CreditCard size={22} color="#8E8E93" />, label: 'Payment Methods', showChevron: true },
+        { icon: <Icons.Settings size={22} color="#8E8E93" />, label: 'Account Settings', showChevron: true },
+        { icon: <Icons.Bell size={22} color="#8E8E93" />, label: 'Notifications', showToggle: true },
+        { icon: <Icons.CreditCard size={22} color="#8E8E93" />, label: 'Payment Methods', showChevron: true },
       ]
     },
     {
       title: 'Preferences',
       items: [
-        { icon: <Shield size={22} color="#8E8E93" />, label: 'Privacy Settings', showChevron: true },
-        { icon: <Share2 size={22} color="#8E8E93" />, label: 'Share Profile', showChevron: true },
+        { icon: <Icons.Shield size={22} color="#8E8E93" />, label: 'Privacy Settings', showChevron: true },
+        { icon: <Icons.Share2 size={22} color="#8E8E93" />, label: 'Share Profile', showChevron: true },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: <HelpCircle size={22} color="#8E8E93" />, label: 'Help & Support', showChevron: true },
+        { icon: <Icons.HelpCircle size={22} color="#8E8E93" />, label: 'Help & Support', showChevron: true },
         { 
-          icon: <AlertTriangle size={22} color="#FF9500" />, 
+          icon: <Icons.AlertTriangle size={22} color="#FF9500" />, 
           label: 'Test Error Tracking', 
           onPress: () => {
             try {
@@ -61,7 +67,7 @@ export default function ProfileScreen() {
     {
       title: null,
       items: [
-        { icon: <LogOut size={22} color="#FF3B30" />, label: 'Sign Out', textColor: '#FF3B30' },
+        { icon: <Icons.LogOut size={22} color="#FF3B30" />, label: 'Sign Out', textColor: '#FF3B30' },
       ]
     }
   ];
@@ -83,7 +89,7 @@ export default function ProfileScreen() {
       </View>
       <View style={styles.menuItemRight}>
         {item.showToggle && <Switch value={true} />}
-        {item.showChevron && <ChevronRight size={20} color="#C7C7CC" />}
+        {item.showChevron && <Icons.ChevronRight size={20} color="#C7C7CC" />}
       </View>
     </TouchableOpacity>
   );

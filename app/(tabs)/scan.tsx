@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,27 +11,38 @@ import {
   Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { Rotate3d as Rotate, ImagePlus, X, Camera as CameraIcon } from 'lucide-react-native';
 import { mockScanCard } from '@/utils/cardScanner';
 import ScanResultModal from '@/components/scan/ScanResultModal';
 
-export default function ScanScreen() {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const cameraRef = useRef(null);
+// Conditionally import camera components
+let CameraView;
+let CameraType;
+let useCameraPermissions;
 
-  useEffect(() => {
+if (Platform.OS !== 'web') {
+  const camera = require('expo-camera');
+  CameraView = camera.CameraView;
+  CameraType = camera.CameraType;
+  useCameraPermissions = camera.useCameraPermissions;
+}
+
+// Native platform component with camera functionality
+function NativeScanScreen() {
+  const [facing, setFacing] = React.useState(CameraType.back);
+  const [isScanning, setIsScanning] = React.useState(false);
+  const [scanResult, setScanResult] = React.useState(null);
+  const [showModal, setShowModal] = React.useState(false);
+  const cameraRef = React.useRef(null);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  React.useEffect(() => {
     if (scanResult) {
       setShowModal(true);
     }
   }, [scanResult]);
 
   if (!permission) {
-    // Camera permissions are still loading
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -40,7 +51,6 @@ export default function ScanScreen() {
   }
 
   if (!permission.granted) {
-    // Camera permissions are not granted yet
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" />
@@ -62,7 +72,7 @@ export default function ScanScreen() {
   }
 
   const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
+    setFacing(current => (current === CameraType.back ? CameraType.front : CameraType.back));
   };
 
   const handleScan = async () => {
@@ -141,6 +151,29 @@ export default function ScanScreen() {
       )}
     </View>
   );
+}
+
+export default function ScanScreen() {
+  // Web platform UI
+  if (Platform.OS === 'web') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" />
+        <View style={styles.permissionContainer}>
+          <Image
+            source={{ uri: 'https://images.pexels.com/photos/6507483/pexels-photo-6507483.jpeg' }}
+            style={styles.permissionImage}
+          />
+          <Text style={styles.permissionTitle}>Camera Not Available</Text>
+          <Text style={styles.permissionText}>
+            The camera feature is not available on web browsers. Please use our mobile app to scan cards.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return <NativeScanScreen />;
 }
 
 const styles = StyleSheet.create({

@@ -9,11 +9,55 @@ import {
   TextInput,
   SafeAreaView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Search, Filter, Plus, ChevronDown } from 'lucide-react-native';
-import CollectionStats from '@/components/collection/CollectionStats';
+import * as LucideNative from 'lucide-react-native';
+import * as LucideWeb from 'lucide-react';
+import { CollectionStats } from '@/components/collection/CollectionStats';
 import { mockCollection } from '@/utils/mockData';
+
+// Platform-specific icon components
+const Icons = Platform.select({
+  web: LucideWeb,
+  default: LucideNative,
+});
+
+const { Search, Filter, Plus, ChevronDown } = Icons;
+
+interface ScrollableTabsProps {
+  tabs: string[];
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+function ScrollableTabs({ tabs, activeTab, onTabChange }: ScrollableTabsProps) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.tabsContent}
+    >
+      {tabs.map((tab) => (
+        <TouchableOpacity
+          key={tab}
+          style={[
+            styles.tab,
+            activeTab === tab && styles.activeTab
+          ]}
+          onPress={() => onTabChange(tab)}
+        >
+          <Text style={[
+            styles.tabText,
+            activeTab === tab && styles.activeTabText
+          ]}>
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+}
 
 const SORT_OPTIONS = ['Recently Added', 'Price: High to Low', 'Price: Low to High', 'Alphabetical'];
 
@@ -28,16 +72,8 @@ export default function CollectionScreen() {
     (activeTab === 'all' || card.category.toLowerCase() === activeTab)
   );
 
-  // Add explicit type checking and default values
-  const totalValueAUD = mockCollection.reduce((sum, card) => {
-    const price = typeof card.priceAUD === 'number' ? card.priceAUD : 0;
-    return sum + price;
-  }, 0);
-
-  const totalValueUSD = mockCollection.reduce((sum, card) => {
-    const price = typeof card.tcgplayerMarket === 'number' ? card.tcgplayerMarket : 0;
-    return sum + price;
-  }, 0);
+  const totalValueAUD = mockCollection.reduce((sum, card) => sum + card.priceAUD, 0);
+  const totalValueUSD = mockCollection.reduce((sum, card) => sum + card.tcgplayerMarket, 0);
 
   const renderCard = ({ item }) => (
     <TouchableOpacity style={styles.card}>
@@ -47,9 +83,7 @@ export default function CollectionScreen() {
         <Text style={styles.cardSet} numberOfLines={1}>{item.set}</Text>
         <View style={styles.priceContainer}>
           <Text style={styles.priceLabel}>Value:</Text>
-          <Text style={styles.priceValue}>
-            ${(typeof item.priceAUD === 'number' ? item.priceAUD : 0).toFixed(2)} AUD
-          </Text>
+          <Text style={styles.priceValue}>${item.priceAUD.toFixed(2)} AUD</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -144,34 +178,6 @@ export default function CollectionScreen() {
         }
       />
     </SafeAreaView>
-  );
-}
-
-function ScrollableTabs({ tabs, activeTab, onTabChange }) {
-  return (
-    <FlatList
-      horizontal
-      data={tabs}
-      keyExtractor={(item) => item}
-      showsHorizontalScrollIndicator={false}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === item && styles.activeTab
-          ]}
-          onPress={() => onTabChange(item)}
-        >
-          <Text style={[
-            styles.tabText,
-            activeTab === item && styles.activeTabText
-          ]}>
-            {item.charAt(0).toUpperCase() + item.slice(1)}
-          </Text>
-        </TouchableOpacity>
-      )}
-      contentContainerStyle={styles.tabsContent}
-    />
   );
 }
 

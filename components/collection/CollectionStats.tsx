@@ -9,12 +9,12 @@ type CollectionStatsProps = {
   uniqueSets: number;
 };
 
-const CollectionStats: React.FC<CollectionStatsProps> = ({ 
+export function CollectionStats({ 
   totalCards, 
   totalValueAUD,
   totalValueUSD,
   uniqueSets 
-}) => {
+}: CollectionStatsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.stat}>
@@ -34,7 +34,7 @@ const CollectionStats: React.FC<CollectionStatsProps> = ({
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -75,5 +75,3 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 });
-
-export default CollectionStats
