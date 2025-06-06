@@ -17,7 +17,7 @@ A comprehensive trading card game collection management app built with React Nat
 
 ### Prerequisites
 
-- Node.js 18 or higher
+ - Node.js 20 or higher
 - npm 9 or higher
 - Expo CLI
 
