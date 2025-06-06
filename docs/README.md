@@ -57,4 +57,3 @@ npm run dev
 - **Database**: Firebase Realtime Database
 - **Analytics**: Firebase Analytics
 - **Error Tracking**: Sentry
-- **Testing**: Jest + React Testing Library
