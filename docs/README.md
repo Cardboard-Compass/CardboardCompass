@@ -2,6 +2,8 @@
 
 A comprehensive trading card game collection management app built with React Native and Expo.
 
+This repository is configured for **Expo SDK 53**.
+
 ## Features
 
 - 📸 Card scanning with image recognition
